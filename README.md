@@ -23,7 +23,6 @@ ChatGPT Caching Solution | Python, FAISS, RAG, Vector Databases, Prompt Engineer
 **Frontend:**
 - React 18
 - CSS3 with modern styling
-- Component-based architecture
 
 **Backend (Coming Soon):**
 - Python
@@ -36,8 +35,7 @@ ChatGPT Caching Solution | Python, FAISS, RAG, Vector Databases, Prompt Engineer
 
 1. **Clone the repository:**
 ```bash
-git clone <your-repo-url>
-cd CacheGPT
+git clone https://github.com/Nikil456/CacheGPT.git
 ```
 
 2. **Install dependencies:**
@@ -102,15 +100,5 @@ CacheGPT/
 ## 💡 Usage
 
 Currently, the UI is a demonstration of the chat interface. Type messages in the input box and press Enter to send. The caching logic will be implemented in future updates.
-
-## 📄 License
-
-MIT
-
-## 👤 Author
-
-Nikil Kandala
-
----
 
 **Note:** This is an active development project. The caching backend and FAISS integration are coming soon!
