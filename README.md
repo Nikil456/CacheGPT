@@ -44,7 +44,7 @@ In Progress
 - [ ] Implement backend API
 - [ ] Integrate FAISS vector database
 - [ ] Add sentence-transformer embeddings
-- [ ] Build RAG pipeline
+- [x] Build RAG pipeline
 - [ ] Add caching logic
 - [x] Create analytics dashboard
 - [ ] Add cache hit rate visualization
