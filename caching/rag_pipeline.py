@@ -29,7 +29,14 @@ def get_embedding(text):
     - Convert numpy array to list before returning
     - Handle empty text edge case
     """
-    pass
+    
+    if not text:
+        return []
+    
+    embedding = model.encode(text)
+    embedding_vectors = embedding.tolist()
+
+    return embedding_vectors
 
 
 def chunk_document(text, chunk_size=500, overlap=50):
@@ -55,7 +62,38 @@ def chunk_document(text, chunk_size=500, overlap=50):
         chunk_size = 3, overlap = 1
         Result: ["word1 word2 word3", "word3 word4 word5"]
     """
-    pass
+    
+    if text is None:
+        return []
+    
+    text = text.strip()
+    if not text:
+        return []
+    
+    if chunk_size <= 0:
+        raise ValueError("chunk size must be > 0")
+    if overlap < 0:
+        raise ValueError("overlap must be >= 0")
+    if overlap >= chunk_size:
+        raise ValueError("overlap must be smaller than chunk size")
+    
+    words = text.split()
+    if len(words) <= chunk_size:
+        return [" ".join(words)]
+    
+    chunks = []
+    step = chunk_size - overlap
+
+    for start in range(0, len(words), step):
+        end = start + chunk_size
+        chunkWords = words[start:end]
+        if not chunkWords:
+            break
+        chunks.append(" ".join(chunkWords))
+        if end >= len(words):
+            break
+    
+    return chunks
 
 
 def add_document_to_store(filename, content):
@@ -82,7 +120,24 @@ def add_document_to_store(filename, content):
             - timestamp
     - Return the total number of chunks created
     """
-    pass
+    
+    chunks = chunk_document(content)
+
+    for i, chunk in enumerate(chunks):
+        embedding = get_embedding(chunk)
+        redisKey = f"doc:{filename}:chunk:{i}"
+        
+        chunkData = {
+            "filename": filename,
+            "chunk_id": i,
+            "content": chunk,
+            "embedding": embedding,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+        redis_client.set(redisKey, json.dumps(chunkData))
+
+    return len(chunks)
 
 
 def retrieve_relevant_context(query, top_k=3):
@@ -106,7 +161,27 @@ def retrieve_relevant_context(query, top_k=3):
     - Sort by similarity (highest first)
     - Return top_k chunks with their similarity scores
     """
-    pass
+    
+    queryEmbedding = get_embedding(query)
+    if not queryEmbedding:
+        return []
+    
+    scoredChunks = []
+
+    for key in redis_client.scan_iter("doc:*:chunk:*"):
+        rawChunk = redis_client.get(key)
+        if not rawChunk:
+            continue
+
+        chunkData = json.loads(rawChunk)
+        chunkEmbedding = chunkData.get("embedding", [])
+        chunkContent = chunkData.get("content", "")
+
+        similarity = cosine_similarity(queryEmbedding, chunkEmbedding)
+        scoredChunks.append((chunkContent, similarity))
+
+    scoredChunks.sort(key=lambda x:x[1], reverse=True)
+    return scoredChunks[:top_k]
 
 
 def cosine_similarity(vec1, vec2):
@@ -128,7 +203,23 @@ def cosine_similarity(vec1, vec2):
     
     Formula: cos(θ) = (A · B) / (||A|| * ||B||)
     """
-    pass
+
+    if vec1 is None or vec2 is None:
+        return 0.0
+    if len(vec1) == 0 or len(vec2) == 0:
+        return 0.0
+    if len(vec1) != len(vec2):
+        raise ValueError("vectors must have the same length")
+    
+    vector1, vector2 = np.array(vec1, dtype=float), np.array(vec2, dtype=float)
+    norm1, norm2 = np.linalg.norm(vector1), np.linalg.norm(vector2)
+    if norm1 == 0.0 or norm2 == 0.0:
+        return 0.0
+    
+    dot_product = np.dot(vector1, vector2)
+    cosine_similarity =  dot_product / (norm1 * norm2)
+
+    return cosine_similarity
 
 
 def get_all_documents():
@@ -143,7 +234,15 @@ def get_all_documents():
     - Extract unique filenames from the keys
     - Return list of filenames
     """
-    pass
+    
+    filenames = set()
+
+    for key in redis_client.scan_iter("doc:*:chunk:0"):
+        parts = key.split(":")
+        if len(parts) >= 4:
+            filenames.add(parts[1])
+
+    return sorted(filenames)
 
 
 def delete_document(filename):
